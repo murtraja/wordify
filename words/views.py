@@ -1,6 +1,6 @@
 from django.contrib.auth import authenticate, login, logout
 from django.contrib.auth.decorators import login_required
-from django.http import HttpResponse, HttpResponseRedirect
+from django.http import HttpResponse, HttpResponseRedirect, JsonResponse
 from django.shortcuts import render
 
 from words.forms import UserForm , UserProfileForm
@@ -75,15 +75,31 @@ def user_logout(request):
 def start_session(request):
     #let 5 words be given first!
     if not request.session.get('wordpks'):
-        wordpks = random.sample([x for x in range(1,31), 5])
-        request.session.set('wordpks', '-'.join(wordpks))
-        request.session.set('cpk', 1)
+        wordpks = random.sample([x for x in range(1,31)], 5)
+        request.session['wordpks']= '-'.join([str(x) for x in wordpks])
+        request.session['ci']= 0
+        print ("now initializing:",request.session)
     return render(request, 'words/start.html/', {})
 def start(request):
     print "in the start"
+    response_dict = {'done':False, 'next':'404'}
     if request.method== 'GET':
-        cw = request.GET['cword']
-        nw = str(Word.objects.get(pk=cw))
-        return HttpResponse(nw)
-    return HttpResponse("?")
+        wordpks = request.session.get('wordpks')
+        if wordpks:
+            wordpks = wordpks.split('-')
+            
+            ci = int(request.session.get('ci'))
+            if ci>=len(wordpks):
+                response_dict['done']=True
+                response_dict['next']='/words/result'
+                return JsonResponse(response_dict)
+            nextword = wordpks[ci]
+            nextword = str(Word.objects.get(pk=nextword))
+            request.session['ci']= ci+1
+            print nextword
+            response_dict['next']=nextword
+    print("now sending json as",response_dict)
+    return JsonResponse(response_dict)
+def result(request):
+    return HttpResponse("well done!")
     
