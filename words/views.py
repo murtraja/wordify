@@ -8,6 +8,8 @@ import urllib2
 from words.forms import UserForm , UserProfileForm
 from words.models import Word
 
+from django.views.decorators.csrf import csrf_exempt
+
 import random
 
 def get_url_from_word(word):
@@ -88,24 +90,31 @@ def start_session(request):
         request.session['ci']= 0
         print ("now initializing:",request.session)
     return render(request, 'words/start.html/', {})
+@csrf_exempt
 def start(request):
     print "in the start"
     response_dict = {'done':False, 'next':'404'}
-    if request.method== 'GET':
-        wordpks = request.session.get('wordpks')
-        if wordpks:
-            wordpks = wordpks.split('-')
-            
-            ci = int(request.session.get('ci'))
-            if ci>=len(wordpks):
-                response_dict['done']=True
-                response_dict['next']='/words/result'
-                return JsonResponse(response_dict)
-            nextword = wordpks[ci]
-            nextword = str(Word.objects.get(pk=nextword))
-            request.session['ci']= ci+1
-            print nextword
-            response_dict['next']=get_url_from_word(nextword)
+    wordpks = request.session.get('wordpks')
+    if wordpks:
+        wordpks = wordpks.split('-')
+        
+        ci = int(request.session.get('ci'))
+        if ci>=len(wordpks):
+            response_dict['done']=True
+            response_dict['next']='/words/result'
+            return JsonResponse(response_dict)
+        nextword = wordpks[ci]
+        nextword = str(Word.objects.get(pk=nextword))
+        request.session['ci']= ci+1
+        print nextword
+        response_dict['next']=get_url_from_word(nextword)
+    if request.method== 'POST':
+        post_dict = request.POST
+        print post_dict
+        print(request.POST['inputWord'])
+    else:
+        #get request => first word!
+        print ("serving get request for 1st word")
     print("now sending json as",response_dict)
     return JsonResponse(response_dict)
 def result(request):
