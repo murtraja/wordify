@@ -17,6 +17,9 @@ BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 MEDIA_URL = '/media/'
 MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
 
+STATIC_PATH = os.path.join(BASE_DIR, 'static')
+
+
 LOGIN_URL = '/words/login'
 
 # Quick-start development settings - unsuitable for production
@@ -42,7 +45,7 @@ INSTALLED_APPS = (
     'django.contrib.staticfiles',
     'words',
 )
-
+SESSION_COOKIE_AGE=3600
 MIDDLEWARE_CLASSES = (
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.common.CommonMiddleware',
@@ -107,3 +110,5 @@ USE_TZ = True
 # https://docs.djangoproject.com/en/1.8/howto/static-files/
 
 STATIC_URL = '/static/'
+STATICFILES_DIRS = (
+                    STATIC_PATH,)

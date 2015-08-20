@@ -6,15 +6,21 @@ from django.shortcuts import render
 from words.forms import UserForm , UserProfileForm
 from words.models import Word
 
+import random
 
 # Create your views here.
 def index(request):
+#     request.session.set_test_cookie()
     context_dict = {"words":'-'.join([x.__str__() for x in Word.objects.all()])}
     return render(request, 'words/index.html', context_dict)
 
 def register(request):
     registration_status = False
-    
+    '''
+    if request.session.test_cookie_worked():
+        print("-----------Worked---------")
+        request.session.delete_test_cookie()
+    '''
     if request.method == 'POST':
         # time to process the data!
         print ("request.Post", request.POST)
@@ -64,3 +70,20 @@ def user_login(request):
 def user_logout(request):
     logout(request)
     return HttpResponseRedirect("/words/")
+
+@login_required
+def start_session(request):
+    #let 5 words be given first!
+    if not request.session.get('wordpks'):
+        wordpks = random.sample([x for x in range(1,31), 5])
+        request.session.set('wordpks', '-'.join(wordpks))
+        request.session.set('cpk', 1)
+    return render(request, 'words/start.html/', {})
+def start(request):
+    print "in the start"
+    if request.method== 'GET':
+        cw = request.GET['cword']
+        nw = str(Word.objects.get(pk=cw))
+        return HttpResponse(nw)
+    return HttpResponse("?")
+    

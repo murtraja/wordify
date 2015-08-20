@@ -21,6 +21,7 @@
         <button onclick="play('text');"> Speak it </button>
         {% if user.is_authenticated %}
         <h1> welcome {{user.username}}</h1>
+        <p> start <a href = '/words/start/'>session</a> now</p>
         <p> <a href = '/words/logout'> logout </a>
         {% else %}
         <a href='/words/register/'>register here!</a>
