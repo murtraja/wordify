@@ -1,8 +1,11 @@
 $(document).ready(function(){
-	$.get('/words/nextword/', {}, function(data) {
-		var url = 'http://tts-api.com/tts.mp3?q='+data['next'];
+	function playWord(url){
 		var a = new Audio(url);
 		a.play();
+	}
+	$.get('/words/nextword/', {}, function(data) {
+		playWord(data['next']);
+
 	});
 	/*
 	$("#subb").click(function(){
@@ -28,12 +31,7 @@ $(document).ready(function(){
 				window.location.replace(redirectionUrl);
 			}
 			else {
-				
-			$('#myDiv').html(data['next']);
-			//var text = document.getElementById(id).value;
-			var url = 'http://tts-api.com/tts.mp3?q='+data['next'];
-			var a = new Audio(url);
-			a.play();
+				playWord(data['next']);
 			}
 			//alert("The paragraph was clicked.");
 			//the url should be retrieved from server <--- todo

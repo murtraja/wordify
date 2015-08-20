@@ -3,11 +3,19 @@ from django.contrib.auth.decorators import login_required
 from django.http import HttpResponse, HttpResponseRedirect, JsonResponse
 from django.shortcuts import render
 
+import urllib2
+
 from words.forms import UserForm , UserProfileForm
 from words.models import Word
 
 import random
 
+def get_url_from_word(word):
+    page = urllib2.urlopen('http://tts-api.com/tts.mp3?q='+word+'&return_url=1')
+    goturl = page.read()
+    print ("|"+goturl+"|")
+    return goturl
+    
 # Create your views here.
 def index(request):
 #     request.session.set_test_cookie()
@@ -97,7 +105,7 @@ def start(request):
             nextword = str(Word.objects.get(pk=nextword))
             request.session['ci']= ci+1
             print nextword
-            response_dict['next']=nextword
+            response_dict['next']=get_url_from_word(nextword)
     print("now sending json as",response_dict)
     return JsonResponse(response_dict)
 def result(request):
