@@ -13,6 +13,7 @@ from django.views.decorators.csrf import csrf_exempt
 import random
 
 def get_url_from_word(word):
+    print("now querying for word"+word)
     page = urllib2.urlopen('http://tts-api.com/tts.mp3?q='+word+'&return_url=1')
     goturl = page.read()
     print ("|"+goturl+"|")
@@ -85,7 +86,7 @@ def user_logout(request):
 def start_session(request):
     #let 5 words be given first!
     if not request.session.get('wordpks'):
-        wordpks = random.sample([x for x in range(1,31)], 5)
+        wordpks = random.sample([x for x in range(1,31)], 2)
         request.session['wordpks']= '-'.join([str(x) for x in wordpks])
         request.session['ci']= 0
         print ("now initializing:",request.session)
@@ -102,16 +103,19 @@ def start(request):
         if ci>=len(wordpks):
             response_dict['done']=True
             response_dict['next']='/words/result'
+            print("received word:",request.POST['inputWord'])
+            del request.session['ci']
+            del request.session['wordpks']
             return JsonResponse(response_dict)
         nextword = wordpks[ci]
         nextword = str(Word.objects.get(pk=nextword))
         request.session['ci']= ci+1
-        print nextword
+        print ("nextword:",nextword)
         response_dict['next']=get_url_from_word(nextword)
     if request.method== 'POST':
         post_dict = request.POST
-        print post_dict
-        print(request.POST['inputWord'])
+        print ("post_dict:",post_dict)
+        print("inputWord",request.POST['inputWord'])
     else:
         #get request => first word!
         print ("serving get request for 1st word")
