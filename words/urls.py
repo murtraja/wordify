@@ -9,4 +9,5 @@ urlpatterns = patterns('',
         url(r'^start/$', views.start_session, name = 'startsession'),
         url(r'^nextword/$', views.start, name = 'start'),
         url(r'^result/$', views.result, name = 'result'),
+        url(r'^test_audio/$', views.test_audio, name='test_audio'),
         )

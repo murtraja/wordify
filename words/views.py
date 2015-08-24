@@ -2,8 +2,8 @@ from django.contrib.auth import authenticate, login, logout
 from django.contrib.auth.decorators import login_required
 from django.http import HttpResponse, HttpResponseRedirect, JsonResponse
 from django.shortcuts import render
-
-import urllib2
+from django.conf import settings
+import urllib2, hashlib
 
 from words.forms import UserForm , UserProfileForm
 from words.models import Word
@@ -86,7 +86,7 @@ def user_logout(request):
 def start_session(request):
     #let 5 words be given first!
     if not request.session.get('wordpks'):
-        wordpks = random.sample([x for x in range(1,31)], 2)
+        wordpks = random.sample([x for x in range(1,31)], 5)
         request.session['wordpks']= '-'.join([str(x) for x in wordpks])
         request.session['ci']= 0
         print ("now initializing:",request.session)
@@ -123,4 +123,9 @@ def start(request):
     return JsonResponse(response_dict)
 def result(request):
     return HttpResponse("well done!")
+def test_audio(request):
+    word = str(Word.objects.get(pk=random.randint(1,len(Word.objects.all()))))
+    path = 'audio/w'+hashlib.sha1(word).hexdigest()+'.mp3' 
+    #path='audio/test.mp3'
+    return render(request, 'words/testaudio.html', {'src':path, 'wrd':word})
     
