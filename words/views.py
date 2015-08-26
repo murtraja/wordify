@@ -14,8 +14,7 @@ import random
 
 def get_url_from_word(word):
     print("now querying for word"+word)
-    page = urllib2.urlopen('http://tts-api.com/tts.mp3?q='+word+'&return_url=1')
-    goturl = page.read()
+    goturl = settings.AUDIO_URL+'w'+hashlib.sha1(word).hexdigest()+'.mp3'
     print ("|"+goturl+"|")
     return goturl
     
@@ -27,11 +26,6 @@ def index(request):
 
 def register(request):
     registration_status = False
-    '''
-    if request.session.test_cookie_worked():
-        print("-----------Worked---------")
-        request.session.delete_test_cookie()
-    '''
     if request.method == 'POST':
         # time to process the data!
         print ("request.Post", request.POST)
@@ -74,7 +68,7 @@ def user_login(request):
                 return HttpResponse("Your wordify account is disabled!")
         else:
             print("Invalid login credentials:", username, password)
-            return HttpResponse("invalid login details suppplied. try again1")
+            return HttpResponse("invalid login details suppplied. try again!")
     else:
         return render(request, 'words/login.html',{})
 @login_required
@@ -111,7 +105,7 @@ def start(request):
         nextword = str(Word.objects.get(pk=nextword))
         request.session['ci']= ci+1
         print ("nextword:",nextword)
-        response_dict['next']='/static/audio/w'+hashlib.sha1(nextword).hexdigest()+'.mp3'
+        response_dict['next']=get_url_from_word(nextword)
     if request.method== 'POST':
         post_dict = request.POST
         print ("post_dict:",post_dict)
