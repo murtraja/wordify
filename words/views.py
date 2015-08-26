@@ -111,7 +111,7 @@ def start(request):
         nextword = str(Word.objects.get(pk=nextword))
         request.session['ci']= ci+1
         print ("nextword:",nextword)
-        response_dict['next']=get_url_from_word(nextword)
+        response_dict['next']='/static/audio/w'+hashlib.sha1(nextword).hexdigest()+'.mp3'
     if request.method== 'POST':
         post_dict = request.POST
         print ("post_dict:",post_dict)

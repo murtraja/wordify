@@ -3,7 +3,7 @@ $(document).ready(function(){
 		var a = new Audio(url);
 		a.play();
 	}
-	alert("something");
+	alert("something")
 	$.get('/words/nextword/', {}, function(data) {
 		playWord(data['next']);
 

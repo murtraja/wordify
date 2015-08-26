@@ -12,7 +12,7 @@
 <!--  <button type="button" onclick="loadXMLDoc()">Request data</button>
 -->
 <audio controls>
-  <source src="{% static "audio/wa6d81694b1fea544cfa7910fbc7133ac5e140813.mp3" %}" type="audio/mpeg">
+  <source src="audio/wa6d81694b1fea544cfa7910fbc7133ac5e140813.mp3" type="audio/mpeg">
 Your browser does not support the audio element.
 </audio>
 
