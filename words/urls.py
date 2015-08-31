@@ -10,4 +10,7 @@ urlpatterns = patterns('',
         url(r'^nextword/$', views.start, name = 'start'),
         url(r'^result/$', views.result, name = 'result'),
         url(r'^test_audio/$', views.test_audio, name='test_audio'),
+        url(r'^group/$', views.group, name = 'group'),
+        url(r'^ganswer_post/$', views.ganswer_post, name = 'ganswer_post'),
+        url(r'^gconnect_post/$', views.gconnect_post, name = 'gconnect_post')
         )

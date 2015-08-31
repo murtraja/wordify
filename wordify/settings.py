@@ -47,6 +47,7 @@ INSTALLED_APPS = (
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
+    'ws4redis',
     'words',
 )
 SESSION_COOKIE_AGE=3600
@@ -74,12 +75,13 @@ TEMPLATES = [
                 'django.template.context_processors.request',
                 'django.contrib.auth.context_processors.auth',
                 'django.contrib.messages.context_processors.messages',
+                'ws4redis.context_processors.default',
             ],
         },
     },
 ]
 
-WSGI_APPLICATION = 'wordify.wsgi.application'
+WSGI_APPLICATION = 'ws4redis.django_runserver.application'
 
 
 # Database
@@ -98,7 +100,7 @@ DATABASES = {
 
 LANGUAGE_CODE = 'en-us'
 
-TIME_ZONE = 'UTC'
+TIME_ZONE = 'Asia/Kolkata'
 
 USE_I18N = True
 
@@ -112,3 +114,16 @@ USE_TZ = True
 
 STATICFILES_DIRS = (
                     STATIC_PATH,)
+
+WEBSOCKET_URL = '/ws/'
+
+WS4REDIS_PREFIX = 'ws'
+
+SESSION_ENGINE = 'redis_sessions.session'
+
+SESSION_REDIS_PREFIX = 'session'
+
+WS4REDIS_EXPIRE = 3600
+
+WS4REDIS_HEARTBEAT = '--heartbeat--'
+

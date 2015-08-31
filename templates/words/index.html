@@ -3,26 +3,14 @@
 
     <head>
         <title>Spelling</title>
-        <script >
-            function play(id){
-            var text = document.getElementById(id).value;
-            var url = 'http://tts-api.com/tts.mp3?q='+text;
-            var a = new Audio(url);
-                a.play();
-            }
-        </script>
     </head>
 
     <body>
-        <h1>Type the word please</h1>
-        hello world! <strong>{{ words }}</strong><br />
-        <!--  <a href="/rango/about/">About</a><br /> -->
-         <input type="text" id="text" />
-        <button onclick="play('text');"> Speak it </button>
         {% if user.is_authenticated %}
         <h1> welcome {{user.username}}</h1>
-        <p> start <a href = '/words/start/'>session</a> now</p>
+        <p> start single <a href = '/words/start/'>session</a> now!</p>
         <p> <a href = '/words/logout'> logout </a>
+        <p> start group<a href = {% url 'group' %}> session </a> now!
         {% else %}
         <a href='/words/register/'>register here!</a>
         <a href='/words/login/'>login here!</a>

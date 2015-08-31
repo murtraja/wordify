@@ -10,6 +10,9 @@ from words.models import Word
 
 from django.views.decorators.csrf import csrf_exempt
 
+from ws4redis.publisher import RedisPublisher
+from ws4redis.redis_store import RedisMessage
+
 import random
 
 def get_url_from_word(word):
@@ -122,4 +125,20 @@ def test_audio(request):
     path = 'audio/w'+hashlib.sha1(word).hexdigest()+'.mp3' 
     #path='audio/test.mp3'
     return render(request, 'words/testaudio.html', {'src':path, 'wrd':word})
+
+@login_required
+def group(request):
+    print(str(request.user)+' requested the group url')
+    # should i publish a message here stating that this user is connected?
+    return render(request, 'words/group.html', {})
+
+@csrf_exempt
+def ganswer_post(request):
+    return HttpResponse('OK')
+
+def gconnect_post(request):
+    msg = str(request.user)+" successfully connected"
+    redis_publisher = RedisPublisher(facility = 'wordify', groups = 'wordify')
+    message = RedisMessage
+
     
