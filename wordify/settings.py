@@ -62,14 +62,11 @@ MIDDLEWARE_CLASSES = (
 )
 
 ROOT_URLCONF = 'wordify.urls'
-TEMPLATE_PATH = os.path.join(BASE_DIR, 'templates')
-TEMPLATE_DIRS=(
-               TEMPLATE_PATH,)
 
 TEMPLATES = [
     {
         'BACKEND': 'django.template.backends.django.DjangoTemplates',
-        'DIRS': [TEMPLATE_PATH],
+        'DIRS': [os.path.join(BASE_DIR, 'templates')],
         'APP_DIRS': True,
         'OPTIONS': {
             'context_processors': [
