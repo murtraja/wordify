@@ -76,6 +76,7 @@ TEMPLATES = [
                 'django.contrib.auth.context_processors.auth',
                 'django.contrib.messages.context_processors.messages',
                 'ws4redis.context_processors.default',
+                'words.context_processors.settings_variables'
             ],
         },
     },
@@ -126,4 +127,6 @@ SESSION_REDIS_PREFIX = 'session'
 WS4REDIS_EXPIRE = 600
 
 WS4REDIS_HEARTBEAT = '--heartbeat--'
+
+MY_PREFIX = 'spellbee'
 

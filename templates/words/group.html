@@ -1,42 +1,78 @@
 <!DOCTYPE html>
 {% load staticfiles %}
 <html>
-	<head>
-		<title> Group </title>
-	</head>
-	<body>
-	<p> Welcome, <pre id = 'user'>{{user.username}}</pre></p>
+<head>
+	<title> Group </title>
+</head>
+<body>
+	<p> Welcome, <b id = 'user'>{{user.username}}</b>!</p>
+	<div id = 'game_elements' hidden>
+
+		<audio id = 'audio_word' controls = 'controls' src ="/static/audio/test.mp3" type="audio/mpeg" >
+			Your browser does not support the audio element.
+		</audio>
+
+		<form id='my_form' method = 'POST' action = "{% url 'ganswer_post'">
+			<input type = 'text' id = 'input_word' name = 'input_word' value = ''/>
+			<input type="submit" id="submit_button" value='Next'/>
+			<div id="myDiv"></div>
+		</form>
+
+	</div>
+	<div id = 'group_choice' >
+		<form id = 'new_group_form' method = 'post' action = "{% url 'new_group' %}">
+			Enter the new or existing group name:
+			<input id = 'new_group' type = 'text' />
+			<select id = 'group_select' >
+			{% for group in groups %}
+			<option value = '{{group.name}}'> {{group.name}} by {{group.owner}} of {{group.totwords}} words having {{group.totmembers}} members
+			{% endfor %}
+			</select>
+			<br>
+			Enter the no. of words:
+			<input type = 'text' id = 'totwords' value = '5'/><br>
+			Enter the no. of members:
+			<input type = 'text' id = 'totmembers' value = '1'/><br>
+			<input id = 'new_group_button' type = 'submit' value = 'create new group'/>
+		</form>
+		<br>
+		<h1>OR</h1>
+		<br>
+		<!-- <form id = 'join_group_form'>
+			<select id = 'join_group'>
+
+
+			</select>
+			<input id = 'join_group_button' type = 'submit' value = 'join group'/>
+		</form> -->
+	</div>
+	<div id = 'pre_game_elements' hidden>
 		<h1 id = 'session_start_notice'> Session will start when 2 users will connect </h1>
 		<input type = 'button' value = 'connect' id = 'connect_button'/>
-		<div id = 'game_elements' hidden>
-
-			<audio id = 'audio_word' controls = 'controls' src ="/static/audio/test.mp3" type="audio/mpeg" >
-				Your browser does not support the audio element.
-			</audio>
-
-			<form id='my_form' method = 'POST'>
-				<input type = 'text' id = 'input_word' name = 'input_word' value = ''/>
-				<input type="submit" id="submit_button" value='Next'/>
-				<div id="myDiv"></div>
- 			</form>
-
-		</div>
 		<a id = 'redirection_url' href = '' hidden> Go to results! </a>
 		<ul id = 'status_messages'>
 
 
 		</ul>
 		<input type = 'button' id = 'test_publish' value = 'test'/>
-		<script src = '{% static "js/jquery-2.1.4.js" %}'></script>
-	  <script src = '{% static "js/ws4redis.js" %}'></script>
-	  <script type = 'text/javascript'> 
-		  var WEBSOCKET_URI = "{{ WEBSOCKET_URI }}";
-		  var GANSWER_POST = "{% url 'ganswer_post' %}";
-		  var GCONNECT_POST = "{% url 'gconnect_post' %}";
-		  var WS4REDIS_HEARTBEAT = {{ WS4REDIS_HEARTBEAT }};
+	</div>
+
+	<ul id = 'broadcast_messages'>
+
+	</ul>
+	<script src = '{% static "js/jquery-2.1.4.js" %}'></script>
+	<script src = '{% static "js/ws4redis.js" %}'></script>
+	<script type = 'text/javascript'> 
+		var WEBSOCKET_URI = "{{ WEBSOCKET_URI }}";
+		var GANSWER_POST = "{% url 'ganswer_post' %}";
+		var GCONNECT_POST = "{% url 'gconnect_post' %}";
+		var WS4REDIS_HEARTBEAT = {{ WS4REDIS_HEARTBEAT }};
+		var MY_PREFIX = "{{MY_PREFIX}}"
+		//var NEW_GROUP = "{% url 'new_group' %}";
+		var FACILITY = "";
 		  //var USERCOUNT = 2;
-	  </script>
-	  <script src = '{% static "js/group-jquery.js" %}'></script>
+		</script>
+		<script src = '{% static "js/group-jquery.js" %}'></script>
 
 	</body>
-</html>
+	</html>

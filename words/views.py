@@ -17,6 +17,8 @@ from ws4redis.redis_store import RedisMessage
 
 import redis
 
+import json
+
 import random
 
 def get_url_from_word(word):
@@ -134,12 +136,26 @@ def test_audio(request):
 def group(request):
     print(str(request.user)+' requested the group url')
     # should i publish a message here stating that this user is connected?
-    return render(request, 'words/group.html', {})
+    rd = redis.StrictRedis()
+    pref = settings.MY_PREFIX
+    groupinfo = []
+    if rd.exists(pref+":groups"):
+        # there is atleast 1 group already created
+        groupnames = rd.smembers(pref+":groups")
+        # groupnames is a set
+        for groupname in groupnames:
+            groupdict = rd.hgetall(pref+":"+groupname+":hash")
+            groupinfo.append(groupdict)
+            print groupdict
+    else:
+        # no groups created as of now!
+        pass
+    return render(request, 'words/group.html', {'groups':groupinfo})
 
 @csrf_exempt
 def gconnect_post(request):
-    group = 'spellbee'
-    totusers = 2
+    group = settings.MY_PREFIX
+    totusers = 1
     redis_publisher = RedisPublisher(facility = 'wordify', groups  = group)
     user = str(request.user)
     msg = user+" connected successfully!"
@@ -149,7 +165,7 @@ def gconnect_post(request):
     # increment the user connected count here!
     rd = redis.StrictRedis()
     noofusers = rd.rpush(group+":"+'users', user )
-    if(noofusers == totusers):
+    if(noofusers >= totusers):
         #now send a magic string which will change the UI of browser into gaming display
         message = RedisMessage('#start')
         redis_publisher.publish_message(message)
@@ -169,7 +185,7 @@ def ganswer_post(request):
     remove the first pk from the wordpks and update wordpks in user session to wordpks[1:]
     continue till wordpks is empty which will signify that all the words have been given to user
     '''
-    group = 'spellbee'
+    group = settings.MY_PREFIX
     username = str(request.user)
     print "inside ganswer_post for user:"+username
     response_dict = {'done':False}
@@ -229,4 +245,58 @@ def test_publish(request):
     redis_publisher.publish_message(message)
     return HttpResponse('OK')
 
-    
+
+
+'''
+whenever a new group is created pref:groupname will contain a list of members
+currently in that group, this will be a set
+
+pref:groupname:hash totwords will contain the total no. of words
+
+pref:groupname:hash totmembers will contain the total no. of members
+
+pref:groupname:hash owner will contain the username who created this group
+
+we also need to maintain a list of all groups that are there
+pref:groups will be a set containing all groups
+
+'''
+@csrf_exempt
+def new_group(request):
+    groupname = request.POST.get("groupname")
+    totwords = request.POST.get("totwords")
+    totmembers = request.POST.get('totmembers')
+    pref = settings.MY_PREFIX
+    prefg = pref+":"+groupname
+    user = str(request.user)
+    rd = redis.StrictRedis()
+    # the above statements are self explanatory
+
+    exists = rd.exists(pref+":"+groupname)
+    if exists:
+        # return error, can't create the group with that name
+        # don't do that, just add this user to the already existing group
+        # if group size < totmembers
+        return JsonResponse({'facility':''})
+
+    # so the group doesn't exist
+    rd.sadd(prefg, user)
+    # add this user to the set of all the users that are part of this group
+
+    hashdict = {'totwords':totwords, 'totmembers':totmembers, "owner":user, "name":groupname}
+    # adding group name is redundant but it simplifies things a lot
+    rd.hmset(prefg+":hash", hashdict)
+    # using hash greatly simplifies the things(dict interconversion hgetall()), though i feel that the
+    # naming convention used is horrible
+
+    redis_publisher = RedisPublisher(facility = pref, broadcast = True)
+    mydict = {"type":"new_group"}
+    mydict.update(hashdict)
+    msgstring = json.dumps(mydict)
+    print msgstring
+    message = RedisMessage(msgstring)
+    redis_publisher.publish_message(message)
+    # notify the others about this new group that was created
+
+    rd.sadd(pref+":groups", groupname)
+    return JsonResponse({'facility':prefg})
