@@ -12,5 +12,6 @@ urlpatterns = patterns('',
         url(r'^test_audio/$', views.test_audio, name='test_audio'),
         url(r'^group/$', views.group, name = 'group'),
         url(r'^ganswer_post/$', views.ganswer_post, name = 'ganswer_post'),
-        url(r'^gconnect_post/$', views.gconnect_post, name = 'gconnect_post')
+        url(r'^gconnect_post/$', views.gconnect_post, name = 'gconnect_post'),
+        url(r'^test_publish/$', views.test_publish, name = 'test_publish')
         )

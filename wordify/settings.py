@@ -123,7 +123,7 @@ SESSION_ENGINE = 'redis_sessions.session'
 
 SESSION_REDIS_PREFIX = 'session'
 
-WS4REDIS_EXPIRE = 3600
+WS4REDIS_EXPIRE = 600
 
 WS4REDIS_HEARTBEAT = '--heartbeat--'
 

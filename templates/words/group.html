@@ -5,7 +5,8 @@
 		<title> Group </title>
 	</head>
 	<body>
-		<h1> Session will start when 2 users will connect </h1>
+	<p> Welcome, <pre id = 'user'>{{user.username}}</pre></p>
+		<h1 id = 'session_start_notice'> Session will start when 2 users will connect </h1>
 		<input type = 'button' value = 'connect' id = 'connect_button'/>
 		<div id = 'game_elements' hidden>
 
@@ -20,12 +21,12 @@
  			</form>
 
 		</div>
-
+		<a id = 'redirection_url' href = '' hidden> Go to results! </a>
 		<ul id = 'status_messages'>
 
 
 		</ul>
-
+		<input type = 'button' id = 'test_publish' value = 'test'/>
 		<script src = '{% static "js/jquery-2.1.4.js" %}'></script>
 	  <script src = '{% static "js/ws4redis.js" %}'></script>
 	  <script type = 'text/javascript'> 
