@@ -6,9 +6,13 @@ su pw is in comment
 1. install virtualenv and virtualenvwrapper through pip install command
 2. create a virtual environment first by typing mkvirtualenv myvenv
 3. if it says command not found, update ~/.bashrc file by including 
+
 	venvwrap="virtualenvwrapper.sh"
+
     venvwrap=`/usr/bin/which $venvwrap`
+
     source $venvwrap
+    
    the above lines at the end. (make sure which virtualenvwrapper.sh command returns something)
 4. if 2. fires successfully then type pip freeze, it should show wheel only
 5. if it shows more than that, comment out the PYTHONPATH variable in the .bashrc file
