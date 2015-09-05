@@ -15,5 +15,6 @@ urlpatterns = patterns('',
         url(r'^group/$', views.group, name = 'group'),
         url(r'^ganswer_post/$', views.ganswer_post, name = 'ganswer_post'),
         url(r'^gconnect_post/$', views.gconnect_post, name = 'gconnect_post'),
-        url(r'^test_publish/$', views.test_publish, name = 'test_publish')
+        url(r'^test_publish/$', views.test_publish, name = 'test_publish'),
+        url(r'^delete_all_keys/$', views.delete_all_keys, name = 'delete_all_keys')
         )

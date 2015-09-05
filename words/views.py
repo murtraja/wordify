@@ -354,3 +354,14 @@ def start_competition(groupname):
     message = RedisMessage('#start')
     redis_publisher.publish_message(message)
     print "published the #start"
+
+def delete_all_keys(request):
+    rd = redis.StrictRedis()
+    print "now deleting keys"
+    pref = settings.MY_PREFIX
+    mydict = rd.keys(pref+"*")
+    mydict = mydict + rd.keys('ws:broadcast*')
+    for k in mydict:
+        resp  = rd.delete(k)
+        print "deleted:",k
+    return HttpResponse("check terminal to see what keys were deleted<br><a href = '"+reverse('group')+"'>go back</a>")
