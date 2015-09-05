@@ -24,10 +24,8 @@
 			Enter the new or existing group name:
 			<input id = 'new_group' type = 'text' />
 			<select id = 'group_select' >
-			{% for group in groups %}
-			<option value = '{{group.name}}'> {{group.name}} by {{group.owner}} of {{group.totwords}} words having {{group.totmembers}} members
-			{% endfor %}
 			</select>
+			<b id = 'group_list_updated' hidden> &lt;---- updated!</b>
 			<br>
 			Enter the no. of words:
 			<input type = 'text' id = 'totwords' value = '5'/><br>
@@ -66,6 +64,7 @@
 		var WEBSOCKET_URI = "{{ WEBSOCKET_URI }}";
 		var GANSWER_POST = "{% url 'ganswer_post' %}";
 		var GCONNECT_POST = "{% url 'gconnect_post' %}";
+		var GINFO = "{% url 'ginfo' %}";
 		var WS4REDIS_HEARTBEAT = {{ WS4REDIS_HEARTBEAT }};
 		var MY_PREFIX = "{{MY_PREFIX}}"
 		//var NEW_GROUP = "{% url 'new_group' %}";

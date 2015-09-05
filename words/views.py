@@ -4,6 +4,7 @@ from django.http import HttpResponse, HttpResponseRedirect, JsonResponse
 from django.shortcuts import render
 from django.conf import settings
 from django.core.urlresolvers import reverse
+from django.core import serializers
 
 import urllib2, hashlib
 
@@ -136,9 +137,14 @@ def test_audio(request):
 def group(request):
     print(str(request.user)+' requested the group url')
     # should i publish a message here stating that this user is connected?
+    return render(request, 'words/group.html', {})
+
+def ginfo(request):
+    print(str(request.user)+' requested groupinfo')
     rd = redis.StrictRedis()
     pref = settings.MY_PREFIX
     groupinfo = []
+    response = {}
     if rd.exists(pref+":groups"):
         # there is atleast 1 group already created
         groupnames = rd.smembers(pref+":groups")
@@ -147,11 +153,11 @@ def group(request):
             groupdict = rd.hgetall(pref+":"+groupname+":hash")
             groupinfo.append(groupdict)
             print groupdict
-    else:
-        # no groups created as of now!
-        pass
-    return render(request, 'words/group.html', {'groups':groupinfo})
-
+        # time to serialize!
+        response['group_list'] = groupinfo
+    response.update( {"success":True, "group_count":len(groupinfo)})
+    print response
+    return JsonResponse(response)
 @csrf_exempt
 def gconnect_post(request):
     group = settings.MY_PREFIX

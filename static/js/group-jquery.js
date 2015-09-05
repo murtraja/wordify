@@ -3,7 +3,7 @@ $(document).ready(function(){
     var ws4redis;
     //listMessage('test');
     var ws4redisBroadcast = WS4Redis({
-        uri: WEBSOCKET_URI+MY_PREFIX+'?subscribe-broadcast&publish-broadcast&echo',
+        uri: WEBSOCKET_URI+MY_PREFIX+'?subscribe-broadcast',
         receive_message: receiveMessageBroadcast,
         heartbeat_msg: WS4REDIS_HEARTBEAT
     });
@@ -12,8 +12,41 @@ $(document).ready(function(){
         if (message.type == 'new_group'){
             //alert(message);
             $('#broadcast_messages').append("<li>"+message.owner+" created the group "+message.name+"</li>");
+            //addGroup(message.name, message.owner, message.totwords, message.totmembers);
+            //depopulateGroups();
+            populateGroups();
             
         }
+    }
+    $('#group_select').click(function(){
+        $('#group_list_updated').hide();
+    });
+    function depopulateGroups(){
+        $('#group_select').html('');
+    }
+    //populate the groups
+    populateGroups();
+    function populateGroups(){
+        $.get(GINFO, function(data){
+            if (data['group_count'] > 0)
+            {
+                console.log("group count > 0");
+                console.log(data['group_list']);
+                depopulateGroups();
+                $.each(data['group_list'], function(index, item){
+                    console.log(item);
+                    addGroup(item['name'], item['owner'], item['totwords'], item['totmembers'])
+                });
+            }
+        });
+    }
+    function addGroup(name, owner, words, members){
+        $('#group_select').append("<option value = '"+name+"'>"+ 
+            name+" by "+owner+" of "+words+" words "+
+            "having "+members+" members");
+        console.log("now adding group"+name);
+        $('#group_list_updated').show();
+        console.log("show() called on updated");
     }
 
     function listMessage (message){
