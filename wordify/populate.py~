@@ -1,2 +1,0 @@
-myfile = open('mywords.txt')
-mystr = myfile.read
