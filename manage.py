@@ -8,6 +8,7 @@ if __name__ == "__main__":
     rd = redis.StrictRedis()
     print "now deleting spellbee*"
     mydict = rd.keys('spellbee*')
+    mydict = mydict + rd.keys('ws:broadcast*')
     for k in mydict:
         resp  = rd.delete(k)
         print "deleted:",k

@@ -30,46 +30,52 @@
 			Enter the no. of words:
 			<input type = 'text' id = 'totwords' value = '5'/><br>
 			Enter the no. of members:
-			<input type = 'text' id = 'totmembers' value = '1'/><br>
+			<input type = 'text' id = 'totmembers' value = '2'/><br>
 			<input id = 'new_group_button' type = 'submit' value = 'create new group'/>
 		</form>
 		<br>
-		<h1>OR</h1>
-		<br>
-		<!-- <form id = 'join_group_form'>
-			<select id = 'join_group'>
-
-
-			</select>
-			<input id = 'join_group_button' type = 'submit' value = 'join group'/>
-		</form> -->
 	</div>
+
 	<div id = 'pre_game_elements' hidden>
-		<h1 id = 'session_start_notice'> Session will start when 2 users will connect </h1>
-		<input type = 'button' value = 'connect' id = 'connect_button'/>
+		<h1 id = 'session_start_notice'> Session will automatically start when users will connect </h1>
 		<a id = 'redirection_url' href = '' hidden> Go to results! </a>
-		<ul id = 'status_messages'>
+		<br>
+		<p> Group specific messages will appear here!</p>
+		<ol id = 'status_messages'>
 
 
-		</ul>
-		<input type = 'button' id = 'test_publish' value = 'test'/>
+		</ol>
 	</div>
+	<br>
+	<p> general messages will appear here!</p>
+	<ol id = 'broadcast_messages'>
 
-	<ul id = 'broadcast_messages'>
-
-	</ul>
+	</ol>
+	<input type = 'button' id = 'test_publish' value = 'test'/>
 	<script src = '{% static "js/jquery-2.1.4.js" %}'></script>
 	<script src = '{% static "js/ws4redis.js" %}'></script>
 	<script type = 'text/javascript'> 
 		var WEBSOCKET_URI = "{{ WEBSOCKET_URI }}";
+		//this variable is used to create a socket connection
+
 		var GANSWER_POST = "{% url 'ganswer_post' %}";
-		var GCONNECT_POST = "{% url 'gconnect_post' %}";
+		//the complete game logic is controlled by this url
+
 		var GINFO = "{% url 'ginfo' %}";
+		//to get the information regarding groups
+
 		var WS4REDIS_HEARTBEAT = {{ WS4REDIS_HEARTBEAT }};
+		//optional as of now, notice no double quotes
+
 		var MY_PREFIX = "{{MY_PREFIX}}"
-		//var NEW_GROUP = "{% url 'new_group' %}";
+		//used to create broadcast socket
+
 		var FACILITY = "";
-		  //var USERCOUNT = 2;
+		// used to create group specific socket
+
+		var ws4redis;
+		//group specific variable
+
 		</script>
 		<script src = '{% static "js/group-jquery.js" %}'></script>
 

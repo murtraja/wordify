@@ -133,6 +133,16 @@ def test_audio(request):
     #path='audio/test.mp3'
     return render(request, 'words/testaudio.html', {'src':path, 'wrd':word})
 
+def test_publish(request):
+    pref = settings.MY_PREFIX
+    redis_publisher = RedisPublisher(facility = pref, broadcast = True)
+    message = RedisMessage(json.dumps({'type':'test', 'message':'this is a test message from server to everyone!'}))
+    redis_publisher.publish_message(message)
+    if request.GET.get('facility', None):
+        redis_publisher = RedisPublisher(facility = request.GET['facility'], broadcast = True)
+        redis_publisher.publish_message(RedisMessage('this is a test message from server to group!'))
+    return HttpResponse('OK')
+
 @login_required
 def group(request):
     print(str(request.user)+' requested the group url')
@@ -152,11 +162,11 @@ def ginfo(request):
         for groupname in groupnames:
             groupdict = rd.hgetall(pref+":"+groupname+":hash")
             groupinfo.append(groupdict)
-            print groupdict
+            #print groupdict
         # time to serialize!
         response['group_list'] = groupinfo
     response.update( {"success":True, "group_count":len(groupinfo)})
-    print response
+    #print response
     return JsonResponse(response)
 @csrf_exempt
 def gconnect_post(request):
@@ -191,17 +201,20 @@ def ganswer_post(request):
     remove the first pk from the wordpks and update wordpks in user session to wordpks[1:]
     continue till wordpks is empty which will signify that all the words have been given to user
     '''
-    group = settings.MY_PREFIX
+    pref = settings.MY_PREFIX
+    facility = request.POST.get('facility')
+    prefg = pref+":"+facility
     username = str(request.user)
     print "inside ganswer_post for user:"+username
     response_dict = {'done':False}
-    totwords = redis.StrictRedis().get(group+":totwords")
+    rd = redis.StrictRedis()
+    d = rd.hgetall(prefg+":hash")
     wordpks = request.session.get('wordpks', 0)
     print 'initial value of wordpks:',wordpks
-    rd = redis.StrictRedis()
+
     if wordpks == 0:
         print "wordpks not in session!"
-        wordpks = rd.get(group+":wordpks")
+        wordpks = d['wordpks']
         # our first word, there won't be any user input here!
         wordpks = wordpks.split('-')
         print "wordpks:"+str(wordpks)
@@ -212,7 +225,7 @@ def ganswer_post(request):
         msgword = "the user "+username+' entered the word '+request.POST.get('input_word')
         print msgword
         # calculate the question no. for which this answer was received
-        x = int(rd.get(group+":totwords"))
+        x = int(d['totwords'])
         wordpks = wordpks.split('-')
         print 'now splitting wordpks...'
         print wordpks
@@ -221,7 +234,8 @@ def ganswer_post(request):
         # currentqno != 0 because lenwordpks < x always in this else block
         # and it is equal in the if block above this else block
         # let's publish this message, shall we?
-        redis_publisher = RedisPublisher(facility = 'wordify', groups = group)
+        redis_publisher = RedisPublisher(facility = facility, broadcast = True)
+        # TODO make this json for consistency
         msgword = username+", gave the answer for question no. "+str(currentqno);
         message = RedisMessage(msgword)
         redis_publisher.publish_message(message)
@@ -245,11 +259,6 @@ def ganswer_post(request):
     return JsonResponse(response_dict)
 
 
-def test_publish(request):
-    redis_publisher = RedisPublisher(facility = 'wordify', groups = 'spellbee')
-    message = RedisMessage('this is a test message from server!')
-    redis_publisher.publish_message(message)
-    return HttpResponse('OK')
 
 
 
@@ -267,6 +276,7 @@ we also need to maintain a list of all groups that are there
 pref:groups will be a set containing all groups
 
 '''
+@login_required
 @csrf_exempt
 def new_group(request):
     groupname = request.POST.get("groupname")
@@ -283,13 +293,32 @@ def new_group(request):
         # return error, can't create the group with that name
         # don't do that, just add this user to the already existing group
         # if group size < totmembers
-        return JsonResponse({'facility':''})
+        d = rd.hgetall(prefg+":hash")
+        response = {'facility':""}
+        if int(d['totmembers'])>int(d['curmembers']):
+            rd.hincrby(prefg+":hash", 'curmembers')
+            #d = rd.hgetall(prefg+":hash")
+            response['facility'] = groupname
+            rd.sadd(prefg, user)
+            #now notify the others that this user joined the group!
+            redis_publisher = RedisPublisher(facility = pref, broadcast = True)
+            mydict = {"type":"new_join", 'who':user, 'name':groupname}
+            
+            msgstring = json.dumps(mydict)
+            print "broadcast message:"+msgstring
+            message = RedisMessage(msgstring)
+            redis_publisher.publish_message(message)
+            # now check if the competition is ready to start
+            if int(d['totmembers'])-1 == int(d['curmembers']):
+                start_competition(groupname)
+
+        return JsonResponse(response)
 
     # so the group doesn't exist
     rd.sadd(prefg, user)
     # add this user to the set of all the users that are part of this group
 
-    hashdict = {'totwords':totwords, 'totmembers':totmembers, "owner":user, "name":groupname}
+    hashdict = {'totwords':totwords, 'totmembers':totmembers, "owner":user, "name":groupname, 'curmembers':1}
     # adding group name is redundant but it simplifies things a lot
     rd.hmset(prefg+":hash", hashdict)
     # using hash greatly simplifies the things(dict interconversion hgetall()), though i feel that the
@@ -305,4 +334,23 @@ def new_group(request):
     # notify the others about this new group that was created
 
     rd.sadd(pref+":groups", groupname)
-    return JsonResponse({'facility':prefg})
+    return JsonResponse({'facility':groupname})
+
+def start_competition(groupname):
+    # prepare the game
+    # now set the questions here!
+    print "starting the competition for "+groupname
+    rd = redis.StrictRedis()
+    pref = settings.MY_PREFIX
+    prefg = pref+":"+groupname
+    d = rd.hgetall(prefg+":hash");
+    print "changing from ",d
+    totwords = int(d['totwords'])
+    wordpks = random.sample([x for x in range(1,31)], totwords)
+    wordpks = '-'.join([str(x) for x in wordpks])
+    rd.hset(prefg+":hash", 'wordpks', wordpks)
+    print "to",rd.hgetall(prefg+":hash")
+    redis_publisher = RedisPublisher(facility = groupname, broadcast = True)
+    message = RedisMessage('#start')
+    redis_publisher.publish_message(message)
+    print "published the #start"
