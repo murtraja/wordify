@@ -1,0 +1,9 @@
+as of 2 hr meeting on tuesday 8th September, 2015
+1. add the option of no. of practice words in single user mode
+2. delete the group info as soon as the game starts
+3. add the option to delete the group
+4. use sessions to store data instead of using redis directly
+5. use jqueryui to decorate elements on page
+	spinner for group members and total words (with wrap around)
+	progressbar for showing competition progress
+6. fix the 'refresh' problem by using session variables in group view

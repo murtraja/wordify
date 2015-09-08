@@ -11,7 +11,10 @@ $(document).ready(function(){
 	});
 	$('#my_form').submit(function(event){
 		event.preventDefault();
-		$.post('/words/nextword/',{inputWord:$('#input_word').val()}, function (data){
+		var input_word = $('#input_word');
+		var user_input_word = input_word.val();
+		input_word.val('');
+		$.post('/words/nextword/',{inputWord:user_input_word}, function (data){
 			if(data['done']){
 				//redirect here!
 				//alert("you are done!");

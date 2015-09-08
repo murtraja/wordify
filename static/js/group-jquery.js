@@ -191,4 +191,9 @@ $('#my_form').submit(function(event){
 function playWord(url){
     $("#audio_word").attr('src', url).trigger('play');
 }
+
+    $('#nullify').click(function(){
+        ws4redisBroadcast = null;
+    });
+
 });

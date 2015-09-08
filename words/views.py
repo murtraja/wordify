@@ -339,6 +339,9 @@ def new_group(request):
 def start_competition(groupname):
     # prepare the game
     # now set the questions here!
+    # ok so the new idea is to delete the group entry
+    # so that the ginfo won't come to know about this 
+    # group
     print "starting the competition for "+groupname
     rd = redis.StrictRedis()
     pref = settings.MY_PREFIX
