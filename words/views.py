@@ -87,16 +87,27 @@ def user_logout(request):
     return HttpResponseRedirect("/words/")
 
 @login_required
-def start_session(request):
-    #let 5 words be given first!
+def single_player(request):
+    return render (request, 'words/single_player.html', {})
+
+
+@login_required
+@csrf_exempt
+def start_single(request):
+    totwords = request.POST.get('totwords', -1)
+    totwords = int(totwords)
+    if totwords == -1:
+        #return error
+        return HttpResponse('Error! total words not posted');
     if not request.session.get('wordpks'):
-        wordpks = random.sample([x for x in range(1,31)], 5)
+        wordpks = random.sample([x for x in range(1,31)], totwords)
         request.session['wordpks']= '-'.join([str(x) for x in wordpks])
         request.session['ci']= 0
         print ("now initializing:",request.session)
     return render(request, 'words/start.html/', {})
+
 @csrf_exempt
-def start(request):
+def sanswer_post(request):
     print "in the start"
     response_dict = {'done':False, 'next':'404'}
     wordpks = request.session.get('wordpks')

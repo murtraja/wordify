@@ -5,7 +5,7 @@ $(document).ready(function(){
 		//a.play();
 	}
 	//alert("something");
-	$.get('/words/nextword/', {}, function(data) {
+	$.get(SANSWER_POST, {}, function(data) {
 		playWord(data['next']);
 
 	});
@@ -14,7 +14,7 @@ $(document).ready(function(){
 		var input_word = $('#input_word');
 		var user_input_word = input_word.val();
 		input_word.val('');
-		$.post('/words/nextword/',{inputWord:user_input_word}, function (data){
+		$.post(SANSWER_POST,{inputWord:user_input_word}, function (data){
 			if(data['done']){
 				//redirect here!
 				//alert("you are done!");

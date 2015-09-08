@@ -8,12 +8,12 @@
     <body>
         {% if user.is_authenticated %}
         <h1> welcome {{user.username}}</h1>
-        <p> start single <a href = '/words/start/'>session</a> now!</p>
-        <p> <a href = '/words/logout'> logout </a>
-        <p> start group<a href = {% url 'group' %}> session </a> now!
+        <p> start single <a href = "{% url 'single_player' %}">session</a> now!</p>
+        <p> <a href = "{% url 'logout' %}"> logout </a>
+        <p> start group<a href = "{% url 'group' %}"> session </a> now!
         {% else %}
-        <a href='/words/register/'>register here!</a>
-        <a href='/words/login/'>login here!</a>
+        <a href="{% url 'register' %}">register here!</a>
+        <a href="{% url 'login' %}">login here!</a>
         {% endif %}
     </body>
 

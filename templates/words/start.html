@@ -3,8 +3,6 @@
 {% load staticfiles %}
 <head>
 
-<script src="{% static "js/jquery-2.1.4.js" %}"></script> 
-<script src="{% static "js/words-jquery.js" %}"></script>
 </head>
 <body>
 
@@ -19,5 +17,10 @@ Your browser does not support the audio element.
 <input type="submit" id="submit_button" value='Next'/>
 <div id="myDiv"></div>
  </form>
+<script src="{% static "js/jquery-2.1.4.js" %}"></script>
+<script type = 'text/javascript'>
+var SANSWER_POST = "{% url 'sanswer_post' %}"
+</script>
+<script src="{% static "js/words-jquery.js" %}"></script>
 </body>
 </html>
