@@ -16,7 +16,7 @@ from django.views.decorators.csrf import csrf_exempt
 from ws4redis.publisher import RedisPublisher
 from ws4redis.redis_store import RedisMessage
 
-import redis
+from redis import StrictRedis
 
 import json
 
@@ -162,7 +162,7 @@ def group(request):
 
 def ginfo(request):
     print(str(request.user)+' requested groupinfo')
-    rd = redis.StrictRedis()
+    rd = StrictRedis()
     pref = settings.MY_PREFIX
     groupinfo = []
     response = {}
@@ -179,30 +179,6 @@ def ginfo(request):
     response.update( {"success":True, "group_count":len(groupinfo)})
     #print response
     return JsonResponse(response)
-@csrf_exempt
-def gconnect_post(request):
-    group = settings.MY_PREFIX
-    totusers = 1
-    redis_publisher = RedisPublisher(facility = 'wordify', groups  = group)
-    user = str(request.user)
-    msg = user+" connected successfully!"
-    print msg
-    message = RedisMessage(msg);
-    redis_publisher.publish_message(message)
-    # increment the user connected count here!
-    rd = redis.StrictRedis()
-    noofusers = rd.rpush(group+":"+'users', user )
-    if(noofusers >= totusers):
-        #now send a magic string which will change the UI of browser into gaming display
-        message = RedisMessage('#start')
-        redis_publisher.publish_message(message)
-        # now set the questions here!
-        totwords = 5
-        wordpks = random.sample([x for x in range(1,31)], totwords)
-        queststring = '-'.join([str(x) for x in wordpks])
-        rd.set(group+":wordpks", queststring)
-        rd.set(group+":totwords", totwords)
-    return HttpResponse('OK')
 
 @csrf_exempt
 def ganswer_post(request):
@@ -212,31 +188,41 @@ def ganswer_post(request):
     remove the first pk from the wordpks and update wordpks in user session to wordpks[1:]
     continue till wordpks is empty which will signify that all the words have been given to user
     '''
+    username = str(request.user)
+    print "inside ganswer_post for user:"+username
     pref = settings.MY_PREFIX
     facility = request.POST.get('facility')
     prefg = pref+":"+facility
-    username = str(request.user)
-    print "inside ganswer_post for user:"+username
     response_dict = {'done':False}
-    rd = redis.StrictRedis()
-    d = rd.hgetall(prefg+":hash")
+    
     wordpks = request.session.get('wordpks', 0)
     print 'initial value of wordpks:',wordpks
 
     if wordpks == 0:
+        # just adds wordpks,totwords to user session
         print "wordpks not in session!"
+        rd = StrictRedis()
+        d = rd.hgetall(prefg+":hash")
         wordpks = d['wordpks']
         # our first word, there won't be any user input here!
         wordpks = wordpks.split('-')
+        request.session['totwords'] = len(wordpks)
         print "wordpks:"+str(wordpks)
+        print 'now removing',request.user,'from pref:groupname'
+        rd.srem(prefg, request.user)
+        if rd.scard(prefg) == 0:
+            # delete this key and hash
+            print "now deleting the group hash"
+            rd.delete([prefg, prefg+":hash"])
     else:
+        # get user_input and send message that user gave the answer
         print "wordpks in session"
         print "wordpks:"+wordpks
         #take and store the user input here
         msgword = "the user "+username+' entered the word '+request.POST.get('input_word')
         print msgword
         # calculate the question no. for which this answer was received
-        x = int(d['totwords'])
+        x = int(request.session['totwords'])
         wordpks = wordpks.split('-')
         print 'now splitting wordpks...'
         print wordpks
@@ -256,10 +242,12 @@ def ganswer_post(request):
         # no more words to dispatch redirect to result page
         # delete the session variables here
         del request.session['wordpks']
+        del request.session['totwords']
         response_dict['done'] = True
         response_dict['next'] = reverse('result')
         return JsonResponse(response_dict)
 
+    # dispatch the next word
     print "now changing wordpks from "+str(wordpks)+" to ",
     nextpk = wordpks[0]
     wordpks = wordpks[1:]
@@ -283,8 +271,9 @@ pref:groupname:hash totmembers will contain the total no. of members
 
 pref:groupname:hash owner will contain the username who created this group
 
-we also need to maintain a list of all groups that are there
-pref:groups will be a set containing all groups
+pref:groupname:hash curmembers will contain current count of members in the group
+
+pref:groups will be a set containing all groups that are there VERY IMPORTANT
 
 '''
 @login_required
@@ -296,7 +285,7 @@ def new_group(request):
     pref = settings.MY_PREFIX
     prefg = pref+":"+groupname
     user = str(request.user)
-    rd = redis.StrictRedis()
+    rd = StrictRedis()
     # the above statements are self explanatory
 
     exists = rd.exists(pref+":"+groupname)
@@ -310,6 +299,7 @@ def new_group(request):
             rd.hincrby(prefg+":hash", 'curmembers')
             #d = rd.hgetall(prefg+":hash")
             response['facility'] = groupname
+            response['new_group_created'] = False
             rd.sadd(prefg, user)
             #now notify the others that this user joined the group!
             redis_publisher = RedisPublisher(facility = pref, broadcast = True)
@@ -345,16 +335,31 @@ def new_group(request):
     # notify the others about this new group that was created
 
     rd.sadd(pref+":groups", groupname)
-    return JsonResponse({'facility':groupname})
+    return JsonResponse({'facility':groupname, 'new_group_created':True})
 
 def start_competition(groupname):
     # prepare the game
     # now set the questions here!
-    # ok so the new idea is to delete the group entry
-    # so that the ginfo won't come to know about this 
-    # group
+    '''
+    ok so the new idea is to delete the group entry
+    so that the ginfo won't come to know about this 
+    group, so that means every thing related to the
+    group will be deleted, after storing it to the database
+    so the set element in pref:groups need to be deleted
+    then pref:groupname:hash needs to be deleted
+    but pref:groupname:wordpks need to be added, with
+    a expire timeout of say 5 seconds, though it is too much
+    chuck that, how about setting the expire timeout here
+    and then copy every property of hash ...
+    actually only pref:groups entry has to be deleted because
+    using this set, ginfo accesses the hash.
+    lets set the time out here for the hash
+    and also broadcast this to inform that a group was deleted
+    maybe settings message.type == 'group_delete'
+    '''
     print "starting the competition for "+groupname
-    rd = redis.StrictRedis()
+    extime = 3
+    rd = StrictRedis()
     pref = settings.MY_PREFIX
     prefg = pref+":"+groupname
     d = rd.hgetall(prefg+":hash");
@@ -368,9 +373,45 @@ def start_competition(groupname):
     message = RedisMessage('#start')
     redis_publisher.publish_message(message)
     print "published the #start"
+    # rd.expire(prefg+":hash", extime)         # get rid of the group details after extime seconds
+    # rd.expire(pref+":"+groupname, extime)   # don't require the usernames in that group also
+    '''
+    don't do the expire here, do it in ganswer_post:
+    whenever user requests the wordpks, it removes its username from pref:groupname. 
+    so check if llen('pref:groupname) is one then remove both, hash and this set
+    this way we will be sure that only delete when every user has transferred wordpks from redis to session
+    '''
+    rd.srem(pref+":groups", groupname)  # prevent this group from showing up in the ginfo
+    # to be on the safer side, should i create a new key storing wordpks? prefg:wordpks?
+    redis_publisher = RedisPublisher(facility = pref, broadcast = True)
+    delete_group_msg = json.dumps({'type':'group_busy', 'name':groupname})
+    redis_publisher.publish_message(RedisMessage(delete_group_msg))
+
+@login_required
+@csrf_exempt
+def gdelete(request):
+    groupname = request.POST.get('name', 0);
+    rd = StrictRedis()
+    pref = settings.MY_PREFIX
+    prefg = pref+":"+groupname
+    user = str(request.user)
+    print "received request for deleting",groupname,"from",user
+    ismember = rd.sismember(pref+":groups",groupname)
+    if not ismember:
+        return JsonResponse({'done':False,'reason':'No such group name'});
+    # now check whether the requesting user is the one who created the group
+    d = rd.hgetall(prefg+":hash")
+    if d['owner'] != user:
+        return JsonResponse({'done':False, 'reason':'Only group owner can delete the group'})
+    rd.srem(pref+":groups", groupname)
+    rd.delete(prefg+":hash", pref+":"+groupname)
+    rd.delete(pref+":"+groupname)
+    redis_publisher = RedisPublisher(facility = pref, broadcast = True)
+    redis_publisher.publish_message(RedisMessage(json.dumps({"type":"group_delete", "name":groupname})))
+    return JsonResponse({'done':True})
 
 def delete_all_keys(request):
-    rd = redis.StrictRedis()
+    rd = StrictRedis()
     print "now deleting keys"
     pref = settings.MY_PREFIX
     mydict = rd.keys(pref+"*")

@@ -34,6 +34,7 @@ $(document).ready(function(){
             as the broadcast messages can be of different types,
             it is better to send it in json format and then parse it
             */
+            var message_original = message;
             message = $.parseJSON(message);
             if (message.type == 'new_group'){
                 listBroadcastMessage(message.owner+" created the group "+message.name);
@@ -45,6 +46,23 @@ $(document).ready(function(){
             }
             else if(message.type == 'test'){
                 listBroadcastMessage(message.message);
+            }
+            else if(message.type == 'group_delete'){
+                listBroadcastMessage("group '"+message.name+"' was removed from available groups");
+                if(FACILITY == message.name){
+                    //this group itself was removed
+                    $('#pre_game_elements').hide();
+                    $('#group_choice').show();
+                }
+                populateGroups();
+            }
+            else if(message.type == 'group_busy'){
+                listBroadcastMessage("group '"+message.name+"' competition commenced!");
+                if (message.name!= FACILITY){
+                    populateGroups();                }
+            }
+            else{
+                alert("broadcast message of unknown type received:"+message_original)
             }
         }
 
@@ -64,7 +82,7 @@ $(document).ready(function(){
                 // console.log(data['group_list']);
                 depopulateGroups();
                 $.each(data['group_list'], function(index, item){
-                    console.log(item);
+                    //console.log(item);
                     addGroup(item['name'], item['owner'], item['totwords'], item['totmembers'], item['curmembers']);
                 });
                 $('#group_list_updated').show();
@@ -110,7 +128,11 @@ $('#test_publish').click(function(){
 // to create/join group
 $('#new_group_form').submit(function(event){
     event.preventDefault();
-    console.log('preventDefault')
+    console.log('preventing Default for group join form');
+    if($('#new_group').val() == ''){
+    alert("group name can't be empty!");
+    return;
+}
     $.post($('#new_group_form').attr('action'), {totwords:$('#totwords').val(), 
         totmembers:$('#totmembers').val(),
         groupname:$('#new_group').val()}, function (data){
@@ -123,6 +145,14 @@ $('#new_group_form').submit(function(event){
                 $('#group_choice').hide();
                 FACILITY = data['facility'];
                 createSocket();
+                if(data['new_group_created']){
+                    console.log("new group was created:"+FACILITY);
+                    $('#delete_group').show();
+                }
+                else{
+                    $('#delete_group').hide();
+                    console.log("user joined to existing group:"+FACILITY);
+                }
             //alert(FACILITY);
         }
     });
@@ -153,6 +183,7 @@ $('#new_group_form').submit(function(event){
     {
        listMessage("now starting...");
        $('#session_start_notice').hide();
+       $('#group_choice').hide();
        $('#game_elements').show();
        // necessary to supply facility in order to publish
        // messages on correct groups
@@ -169,6 +200,20 @@ $('#new_group_form').submit(function(event){
       var msg = $('#input_word').val();
       return msg;
   }
+
+  $('#delete_group').click(function(){
+    console.log("now called delete_group");
+    $.post(GDELETE, {name:FACILITY}, function(data){
+        if(data['done']){
+            //the group was deleted succesfully
+            // now display the hidden fields or just refresh page
+            alert('group deleted');
+        }
+        else{
+            alert('not deleted');
+        }
+    });
+  });
 
 // game logic
 $('#my_form').submit(function(event){

@@ -32,7 +32,7 @@
 			<input type = 'text' id = 'totwords' value = '5'/><br>
 			Enter the no. of members:
 			<input type = 'text' id = 'totmembers' value = '2'/><br>
-			<input id = 'new_group_button' type = 'submit' value = 'create new group'/>
+			<input id = 'new_group_button' type = 'submit' value = 'create/join group'/>
 		</form>
 		<br>
 	</div>
@@ -40,6 +40,7 @@
 	<div id = 'pre_game_elements' hidden>
 		<h1 id = 'session_start_notice'> Session will automatically start when users will connect </h1>
 		<a id = 'redirection_url' href = '' hidden> Go to results! </a>
+		<input type='button' id = 'delete_group' value = 'Delete group' hidden/>
 		<br>
 		<p> Group specific messages will appear here!</p>
 		<ol id = 'status_messages'>
@@ -67,10 +68,13 @@
 		var GINFO = "{% url 'ginfo' %}";
 		//to get the information regarding groups
 
+		var GDELETE = "{% url 'gdelete' %}";
+		// to delete the group
+
 		var WS4REDIS_HEARTBEAT = {{ WS4REDIS_HEARTBEAT }};
 		//optional as of now, notice no double quotes
 
-		var MY_PREFIX = "{{MY_PREFIX}}"
+		var MY_PREFIX = "{{MY_PREFIX}}";
 		//used to create broadcast socket
 
 		var FACILITY = "";

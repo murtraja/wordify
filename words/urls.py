@@ -35,6 +35,9 @@ urlpatterns = patterns('',
         url(r'^ganswer_post/$', views.ganswer_post, name = 'ganswer_post'),
         # gets the next word and posts the user input in the group gameplay
 
+        url(r'^gdelete/$', views.gdelete, name = 'gdelete'),
+        # deletes the posted group name =AJAX=
+
         url(r'^test_publish/$', views.test_publish, name = 'test_publish'),
         # for debugging purposes only
 

@@ -6,4 +6,6 @@ as of 2 hr meeting on tuesday 8th September, 2015
 5. use jqueryui to decorate elements on page
 	spinner for group members and total words (with wrap around)
 	progressbar for showing competition progress
+	wordsuggest in typing groups
 6. fix the 'refresh' problem by using session variables in group view
+7. add the question no. in both modes, show progress bar
