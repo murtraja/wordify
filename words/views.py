@@ -201,15 +201,28 @@ def result_single(request):
 
 @login_required
 def result_group(request):
-    gfr_obj = GroupFinalResult.objects.filter(re_user = request.user).order_by('-starttime')[:1]
-    print "printing gfr:",gfr_obj
-    grt_obj = GroupResultTable.objects.filter(usertest = gfr_obj)
-    print "printing grt:",grt_obj
+    # groupname = request.session.get('groupname',False)
+    # if not groupname:
+    #     return HttpResponse('error! groupname not found')
+    groupname = 'groupname3'
+    gfr_objs = GroupFinalResult.objects.filter(groupname = groupname)
+    # get all the entries having the grouname, probably need to sort it too, if there are multiple
+    # entries with same group names!
+    print "printing gfr:",gfr_objs
+    grt_objs = [GroupResultTable.objects.filter(usertest = gfr_obj) for gfr_obj in gfr_objs]
+    print "printing grt:",grt_objs
     response_dict = {'data':[]}
-    for useranswer in grt_obj:
-        response_dict['data'].append( [useranswer.correct_ans,useranswer.ans, useranswer.marks])
+    for users in grt_objs:
+        answer_dict = {'user':users[0].usertest.re_user.username, 'ans':[]}
+        for answer in users:
+            answer_dict['ans'].append( [answer.correct_ans,answer.ans, answer.marks])
+        response_dict['data'].append(answer_dict)
+        print "response_dict:",response_dict
+    print ""
     print "printing response_dict for",request.user,":",response_dict
-    return JsonResponse(response_dict)
+    #return JsonResponse(response_dict)
+    return render(request, 'words/group_result.html', {'jsondata':json.dumps(response_dict)})
+
 def test_audio(request):
     word = str(Word.objects.get(pk=random.randint(1,len(Word.objects.all()))))
     path = 'audio/w'+hashlib.sha1(word).hexdigest()+'.mp3' 
@@ -531,11 +544,17 @@ def start_competition(request,groupname):
 
     group_members = rd.smembers(prefg)
     rd.sadd(prefg+":members", *group_members)
+    rd.sadd(prefg+":gmembers", *group_members)
+    rd.expire(prefg+":gmembers", 500)
     # create a new key containing all the members of this group
     # in pref:groupname:members this key will be helpful in checking
     # how many users have completed the competition, on similar lines
     # pref:groupname key will be responsible in providing the condition
     # as to when the pref:groupname:hash need to be deleted!
+    # also copying to gmembers so that i know whose results are to be delivered in result_group
+    # but only for 5 minutes you can view your previous group results, restricted, right? i know
+    # the idea is to make a generic view which returns all the information, pretty much like
+    # the admin interface app but providing interactive charts rather than pure data to see
     print "copied the group_members",group_members
     redis_publisher = RedisPublisher(facility = pref, broadcast = True)
     delete_group_msg = json.dumps({'type':'group_busy', 'name':groupname})
