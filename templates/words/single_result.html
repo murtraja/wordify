@@ -1,0 +1,94 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <title>Practice Results</title>
+</head>
+
+<body>
+
+    <div id="placeholder" style="width:600px;height:300px"></div>
+
+    <script language="javascript" type="text/javascript" src="jquery-2.1.4.js"></script>
+    <script language="javascript" type="text/javascript" src="jquery.flot.js"></script>
+    <script type="text/javascript">
+        $(document).ready(function(){
+
+            var jsondata = {{jsondata}}
+            //{"data": [["awkward", "awkward_mmr", 0], ["apartment", "apartment", 1], ["aftermath", "aftermath_mmr", 0]]};
+            var length = jsondata['data'].length;
+            var ticks_x = [];
+            $(jsondata['data']).each(function(index){
+                ticks_x.push([(index+1), $(this)[0]]);
+            });
+            console.log(ticks_x);
+            var ticks_y = [
+            [0,""],
+            [1,'WRONG'],
+            [2,'RIGHT']
+            ]
+            var datapts = []
+            for (var i = 0; i<length; i++){
+                datapts.push([(i+1), jsondata['data'][i][2]+1])
+            }
+            console.log(datapts)
+
+            var d1 = {
+                data: datapts,
+            }
+
+            var options = {
+                xaxis:{ticks:ticks_x}, 
+                max:5,
+                yaxis:{ticks:ticks_y},
+                grid:{hoverable:true, clickable:true},
+                bars:{show:true, align:"center", barWidth : 1},
+
+            };
+            $.plot($('#placeholder'), [d1], options);
+
+            $("<div id='tooltip'></div>").css({
+                position: "absolute",
+                display: "none",
+                border: "1px solid #fdd",
+                padding: "2px",
+                "background-color": "#fee",
+                opacity: 0.80
+            }).appendTo("body");
+            $("#placeholder").bind("plothover", function (event, pos, item) {
+
+                    /*
+                    if ($("#enablePosition:checked").length > 0) {
+                        var str = "(" + pos.x.toFixed(2) + ", " + pos.y.toFixed(2) + ")";
+                        $("#hoverdata").text(str);
+                    }
+                    */
+
+                    if (item) {
+                        var x = item.datapoint[0].toFixed(2);
+                        //y = item.datapoint[1].toFixed(2);
+
+                        $("#tooltip").html("Your answer: '"+jsondata['data'][x-1][1]+"'")
+                        .css({top: item.pageY+5, left: item.pageX+5})
+                        .fadeIn(200);
+                    } else {
+                        $("#tooltip").hide();
+                    }
+                });
+
+            $("#placeholder").bind("plotclick", function(event, pos, item){
+                console.log("event:");
+                console.log(event);
+                console.log(pos);
+                console.log(item);
+                if(item){
+                    var x = item.datapoint[0];
+                    $('#msg').html('You clicked on Q.No.: '+(x)+', Correct: '+jsondata['data'][x-1][0]+
+                        ', you answered: '+jsondata['data'][x-1][1])
+                }
+            });
+        });
+</script>
+</body>
+
+</html>

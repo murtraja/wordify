@@ -5,11 +5,12 @@ from django.shortcuts import render
 from django.conf import settings
 from django.core.urlresolvers import reverse
 from django.core import serializers
-
+from datetime import datetime
+from datetime import timedelta
 import urllib2, hashlib
 
 from words.forms import UserForm , UserProfileForm
-from words.models import Word
+from words.models import Word,GroupFinalResult,GroupResultTable,FinalResult,ResultTable
 
 from django.views.decorators.csrf import csrf_exempt
 
@@ -104,6 +105,16 @@ def start_single(request):
         request.session['wordpks']= '-'.join([str(x) for x in wordpks])
         request.session['ci']= 0
         print ("now initializing:",request.session)
+        obj=FinalResult.objects.filter(re_user=request.user).order_by('-session_id')[:1]
+        print "ethe"
+        #print "sessionid"+str(obj[0].session_id)
+        if(not obj):
+            obj=FinalResult(re_user=request.user,session_id=1,marks=0,starttime=datetime.now(),endtime=datetime.now()+timedelta(minutes=5))
+            obj.save()
+        else:
+            obj1=FinalResult(re_user=request.user,session_id=(obj[0].session_id+1),starttime=datetime.now(),marks=0,endtime=datetime.now()+timedelta(minutes=5))
+            obj1.save()   #current session
+            #print "kela"
     return render(request, 'words/start.html/', {})
 
 @csrf_exempt
@@ -111,33 +122,82 @@ def sanswer_post(request):
     print "in the start"
     response_dict = {'done':False, 'next':'404'}
     wordpks = request.session.get('wordpks')
+    usr=request.user        #username
+    #print "username "+usr.username
     if wordpks:
         wordpks = wordpks.split('-')
-        
+        print str(wordpks)
         ci = int(request.session.get('ci'))
-        if ci>=len(wordpks):
+
+
+        #print ("nextword:",nextword)
+
+    if request.method== 'POST':
+        post_dict = request.POST
+        #print ("post_dict:",post_dict)
+        #print("inputWord",request.POST['inputWord'])
+        cindex1=str(wordpks[ci-1])
+        print "cindex "+cindex1
+        correct_word=str(Word.objects.get(pk=cindex1))
+        print "correct_word "+str(correct_word)
+        input_word=request.POST['inputWord']
+        print "input_word "+input_word
+        print "ci "+str(ci)
+        if str(correct_word)==str(input_word):
+            mark=1
+            sc1=FinalResult.objects.filter(re_user=request.user).order_by('-session_id')[:1]
+            sc=sc1[0]
+            sc.marks+=1
+            sc.save()
+            print sc.marks
+        else:
+            mark=0
+        print "marks"+str(mark)
+        #new
+        obj=FinalResult.objects.filter(re_user=request.user).order_by('-session_id')[:1]  #to find current session
+        newobj1=ResultTable(re_user=usr,session_id=obj[0].session_id,correct_ans=correct_word,ans=input_word,marks=mark)
+        newobj1.save()
+
+        #newobj=TestResult(re_user=usr,cindex=cindex1,correct_ans=correct_word,ans=input_word,marks=mark)
+       # newobj.save()
+        if ci>=(len(wordpks)):
             response_dict['done']=True
             response_dict['next']='/words/result'
-            print("received word:",request.POST['inputWord'])
+
+            #print("received word:",request.POST['inputWord'])
             del request.session['ci']
             del request.session['wordpks']
             return JsonResponse(response_dict)
-        nextword = wordpks[ci]
-        nextword = str(Word.objects.get(pk=nextword))
+        nextword = wordpks[ci]          #cindex
+        nextword = str(Word.objects.get(pk=nextword))        #correct_word
         request.session['ci']= ci+1
-        print ("nextword:",nextword)
-        response_dict['next']=get_url_from_word(nextword)
-    if request.method== 'POST':
-        post_dict = request.POST
-        print ("post_dict:",post_dict)
-        print("inputWord",request.POST['inputWord'])
     else:
         #get request => first word!
+        nextword = wordpks[ci]          #cindex
+        nextword = str(Word.objects.get(pk=nextword))        #correct_word
+        request.session['ci']= ci+1
+        #response_dict['next']='/static/audio/w'+hashlib.sha1(nextword).hexdigest()+'.mp3'
         print ("serving get request for 1st word")
+
+    response_dict['next']=get_url_from_word(nextword)
     print("now sending json as",response_dict)
     return JsonResponse(response_dict)
+
+@login_required
 def result(request):
-    return HttpResponse("well done!")
+    # groupname = request.session.get('groupname', 0)
+    # if not groupname:
+    #     return HttpResponse("error")
+
+    gfr_obj = GroupFinalResult.objects.filter(re_user = request.user).order_by('-starttime')[:1]
+    print "printing gfr:",gfr_obj
+    grt_obj = GroupResultTable.objects.filter(usertest = gfr_obj)
+    print "printing grt:",grt_obj
+    response_dict = {'data':[]}
+    for useranswer in grt_obj:
+        response_dict['data'].append( [useranswer.correct_ans,useranswer.ans, useranswer.marks])
+    print "printing response_dict for",request.user,":",response_dict
+    return JsonResponse(response_dict)
 def test_audio(request):
     word = str(Word.objects.get(pk=random.randint(1,len(Word.objects.all()))))
     path = 'audio/w'+hashlib.sha1(word).hexdigest()+'.mp3' 
@@ -204,6 +264,7 @@ def ganswer_post(request):
         rd = StrictRedis()
         d = rd.hgetall(prefg+":hash")
         wordpks = d['wordpks']
+
         # our first word, there won't be any user input here!
         wordpks = wordpks.split('-')
         request.session['totwords'] = len(wordpks)
@@ -221,6 +282,29 @@ def ganswer_post(request):
         #take and store the user input here
         msgword = "the user "+username+' entered the word '+request.POST.get('input_word')
         print msgword
+        if not (wordpks == [] or wordpks == ['']):
+            #print "adhicha word"
+            correct_ans=request.session.get('prev_word')
+            ans=request.POST.get('input_word')
+            if(str(correct_ans)==str(ans)):
+                print "correct"
+                marks=1
+            else:
+                print "wrong"
+                marks=0
+            obj1=GroupFinalResult.objects.filter(re_user=request.user).order_by('-starttime')[:1]
+            currentobj=obj1[0]
+            #print str(currentobj.starttime)
+            print str(request.session.get('prev_word'))
+            print str(request.POST.get('input_word'))
+            ans=request.POST.get('input_word')
+            currentobj.marks+=marks
+            currentobj.save()
+            print str(currentobj.marks)
+            obj2=GroupResultTable(usertest=currentobj,correct_ans=correct_ans,ans=ans,marks=marks)   #to store result of each word
+            obj2.save()
+            print "zala"+str(obj2.marks)
+
         # calculate the question no. for which this answer was received
         x = int(request.session['totwords'])
         wordpks = wordpks.split('-')
@@ -243,6 +327,7 @@ def ganswer_post(request):
         # delete the session variables here
         del request.session['wordpks']
         del request.session['totwords']
+        request.session['groupname'] = facility
         response_dict['done'] = True
         response_dict['next'] = reverse('result')
         return JsonResponse(response_dict)
@@ -250,6 +335,15 @@ def ganswer_post(request):
     # dispatch the next word
     print "now changing wordpks from "+str(wordpks)+" to ",
     nextpk = wordpks[0]
+    print wordpks[0]
+    an=wordpks[0]
+    wrd=Word.objects.get(pk=an)
+    print "current word"
+    print wrd.word          #correct words
+    correct_ans=wrd.word
+    request.session['prev_word']=correct_ans #to store current word
+    ans=request.POST.get('input_word')
+    print ans
     wordpks = wordpks[1:]
     print wordpks
     request.session['wordpks'] = '-'.join(wordpks)
@@ -309,6 +403,8 @@ def new_group(request):
             print "broadcast message:"+msgstring
             message = RedisMessage(msgstring)
             redis_publisher.publish_message(message)
+            obj=GroupFinalResult(re_user=request.user,groupname=groupname,marks=0,starttime=datetime.now(),endtime=datetime.now()+timedelta(minutes=5))
+            obj.save()
             # now check if the competition is ready to start
             if int(d['totmembers'])-1 == int(d['curmembers']):
                 start_competition(groupname)
@@ -324,7 +420,8 @@ def new_group(request):
     rd.hmset(prefg+":hash", hashdict)
     # using hash greatly simplifies the things(dict interconversion hgetall()), though i feel that the
     # naming convention used is horrible
-
+    obj=GroupFinalResult(re_user=request.user,groupname=groupname,marks=0,starttime=datetime.now(),endtime=datetime.now()+timedelta(minutes=5))
+    obj.save()
     redis_publisher = RedisPublisher(facility = pref, broadcast = True)
     mydict = {"type":"new_group"}
     mydict.update(hashdict)
