@@ -1,7 +1,7 @@
 from django.contrib.auth import authenticate, login, logout
 from django.contrib.auth.decorators import login_required
 from django.http import HttpResponse, HttpResponseRedirect, JsonResponse
-from django.shortcuts import render
+from django.shortcuts import render, render_to_response
 from django.conf import settings
 from django.core.urlresolvers import reverse
 from django.core import serializers
@@ -10,7 +10,7 @@ from datetime import timedelta
 import urllib2, hashlib
 
 from words.forms import UserForm , UserProfileForm
-from words.models import Word,GroupFinalResult,GroupResultTable,FinalResult,ResultTable
+from words.models import Word,GroupFinalResult,GroupResultTable,FinalResult,ResultTable,User
 
 from django.views.decorators.csrf import csrf_exempt
 
@@ -162,7 +162,7 @@ def sanswer_post(request):
        # newobj.save()
         if ci>=(len(wordpks)):
             response_dict['done']=True
-            response_dict['next']='/words/result'
+            response_dict['next']=reverse('result_single')
 
             #print("received word:",request.POST['inputWord'])
             del request.session['ci']
@@ -184,11 +184,23 @@ def sanswer_post(request):
     return JsonResponse(response_dict)
 
 @login_required
-def result(request):
-    # groupname = request.session.get('groupname', 0)
-    # if not groupname:
-    #     return HttpResponse("error")
+def result_single(request):
+    fr_obj=FinalResult.objects.filter(re_user = request.user).order_by('-session_id')
+    print "sliced version:",fr_obj[:1]
+    print "simply adding [0]:",fr_obj[0]
+    fr_obj = fr_obj[0]
+    rt_obj = ResultTable.objects.filter(session_id = fr_obj.session_id, re_user = request.user)
+    print "rt obj",rt_obj
+    response_dict = {'data':[]}
+    for obj in rt_obj:
+        response_dict['data'].append([obj.correct_ans, obj.ans, obj.marks])
+    print "response_dict for single_player",response_dict
+    # return JsonResponse(response_dict)
+    return render_to_response('words/single_result.html',{'jsondata':json.dumps(response_dict)})
 
+
+@login_required
+def result_group(request):
     gfr_obj = GroupFinalResult.objects.filter(re_user = request.user).order_by('-starttime')[:1]
     print "printing gfr:",gfr_obj
     grt_obj = GroupResultTable.objects.filter(usertest = gfr_obj)
@@ -263,18 +275,29 @@ def ganswer_post(request):
         print "wordpks not in session!"
         rd = StrictRedis()
         d = rd.hgetall(prefg+":hash")
+        # store this dictionary in the session first
+        # there is no need to do that!
+        # request.session['hash'] = d
+        # print "stored the hash dictionary in session"
+        # print "wordpks: ",request.session['hash']['wordpks']
         wordpks = d['wordpks']
+
 
         # our first word, there won't be any user input here!
         wordpks = wordpks.split('-')
         request.session['totwords'] = len(wordpks)
         print "wordpks:"+str(wordpks)
         print 'now removing',request.user,'from pref:groupname'
-        rd.srem(prefg, request.user)
+        print rd.keys(pref+"*")
+        print 'cardinality changed from',rd.scard(prefg),'to',
+        rd.srem(prefg, str(request.user))
+        print rd.scard(prefg)
         if rd.scard(prefg) == 0:
             # delete this key and hash
             print "now deleting the group hash"
-            rd.delete([prefg, prefg+":hash"])
+            rd.delete(prefg)
+            rd.delete(prefg+":hash")
+            print rd.keys(pref+"*")
     else:
         # get user_input and send message that user gave the answer
         print "wordpks in session"
@@ -284,8 +307,8 @@ def ganswer_post(request):
         print msgword
         if not (wordpks == [] or wordpks == ['']):
             #print "adhicha word"
-            correct_ans=request.session.get('prev_word')
-            ans=request.POST.get('input_word')
+            correct_ans=request.session.get('prev_word').strip()
+            ans=request.POST.get('input_word').strip()
             if(str(correct_ans)==str(ans)):
                 print "correct"
                 marks=1
@@ -327,6 +350,32 @@ def ganswer_post(request):
         # delete the session variables here
         del request.session['wordpks']
         del request.session['totwords']
+        # del request.session['hash']
+        '''
+            so the thing is that we should display the results only 
+            if all the users have finished playing, otherwise, we won't
+            have data to put in the charts. therefore, whenever a user reaches this
+            block, we check:
+                if there are more users yet to reach this block then
+                    store this user's name somewhere
+                else this user is the last to finish, then
+                    inform to all the users that results are ready to be dispatched
+        '''
+        rd = StrictRedis()
+        # remove this user from the set
+        print "now removing",str(request.user),"from prefg:members"
+        print 'cardinality changed from',rd.scard(prefg+":members"),'to',
+        rd.srem(prefg+":members", str(request.user))
+        print rd.scard(prefg+":members")
+        if rd.scard(prefg+":members") == 0:
+            # all the users have completed the competition, time to display the results!
+            print 'all users done before'
+            print rd.keys(pref+"*")
+            print "all the users have finished the competition"
+            rd.delete(prefg+":members");
+            print rd.keys(pref+"*")
+            redis_publisher = RedisPublisher(facility = facility, broadcast = True)
+            redis_publisher.publish_message(RedisMessage("#end"))
         request.session['groupname'] = facility
         response_dict['done'] = True
         response_dict['next'] = reverse('result')
@@ -403,11 +452,10 @@ def new_group(request):
             print "broadcast message:"+msgstring
             message = RedisMessage(msgstring)
             redis_publisher.publish_message(message)
-            obj=GroupFinalResult(re_user=request.user,groupname=groupname,marks=0,starttime=datetime.now(),endtime=datetime.now()+timedelta(minutes=5))
-            obj.save()
+            
             # now check if the competition is ready to start
             if int(d['totmembers'])-1 == int(d['curmembers']):
-                start_competition(groupname)
+                start_competition(request,groupname)
 
         return JsonResponse(response)
 
@@ -420,8 +468,7 @@ def new_group(request):
     rd.hmset(prefg+":hash", hashdict)
     # using hash greatly simplifies the things(dict interconversion hgetall()), though i feel that the
     # naming convention used is horrible
-    obj=GroupFinalResult(re_user=request.user,groupname=groupname,marks=0,starttime=datetime.now(),endtime=datetime.now()+timedelta(minutes=5))
-    obj.save()
+    
     redis_publisher = RedisPublisher(facility = pref, broadcast = True)
     mydict = {"type":"new_group"}
     mydict.update(hashdict)
@@ -434,7 +481,7 @@ def new_group(request):
     rd.sadd(pref+":groups", groupname)
     return JsonResponse({'facility':groupname, 'new_group_created':True})
 
-def start_competition(groupname):
+def start_competition(request,groupname):
     # prepare the game
     # now set the questions here!
     '''
@@ -455,11 +502,12 @@ def start_competition(groupname):
     maybe settings message.type == 'group_delete'
     '''
     print "starting the competition for "+groupname
-    extime = 3
+    print 'the following keys are there'
     rd = StrictRedis()
     pref = settings.MY_PREFIX
     prefg = pref+":"+groupname
-    d = rd.hgetall(prefg+":hash");
+    d = rd.hgetall(prefg+":hash")
+    print rd.keys(pref+'*')
     print "changing from ",d
     totwords = int(d['totwords'])
     wordpks = random.sample([x for x in range(1,31)], totwords)
@@ -480,9 +528,27 @@ def start_competition(groupname):
     '''
     rd.srem(pref+":groups", groupname)  # prevent this group from showing up in the ginfo
     # to be on the safer side, should i create a new key storing wordpks? prefg:wordpks?
+
+    group_members = rd.smembers(prefg)
+    rd.sadd(prefg+":members", *group_members)
+    # create a new key containing all the members of this group
+    # in pref:groupname:members this key will be helpful in checking
+    # how many users have completed the competition, on similar lines
+    # pref:groupname key will be responsible in providing the condition
+    # as to when the pref:groupname:hash need to be deleted!
+    print "copied the group_members",group_members
     redis_publisher = RedisPublisher(facility = pref, broadcast = True)
     delete_group_msg = json.dumps({'type':'group_busy', 'name':groupname})
     redis_publisher.publish_message(RedisMessage(delete_group_msg))
+    sttime=datetime.now()
+    usrs=rd.smembers(prefg)
+    print "for",groupname,"members are",usrs
+    for i in usrs:
+        obj=GroupFinalResult(re_user=User.objects.get(username=i),groupname=groupname,marks=0,starttime=sttime,endtime=sttime)
+        obj.save()
+
+    print 'leaving start competition...'
+    print rd.keys(pref+"*")
 
 @login_required
 @csrf_exempt

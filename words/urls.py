@@ -17,8 +17,11 @@ urlpatterns = patterns('',
         url(r'^sanswer_post/$', views.sanswer_post, name = 'sanswer_post'),
         # used to get the next word in the practice session and post the user input to database =AJAX=
 
-        url(r'^result/$', views.result, name = 'result'),
+        url(r'^result/$', views.result_group, name = 'result'),
         # to display results 
+
+        url(r'^result_single/$', views.result_single, name = 'result_single'),
+        # single practice results display
 
         url(r'^test_audio/$', views.test_audio, name='test_audio'),
         # for testing purposes only

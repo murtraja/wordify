@@ -8,14 +8,16 @@
 <body>
 
     <div id="placeholder" style="width:600px;height:300px"></div>
-
-    <script language="javascript" type="text/javascript" src="jquery-2.1.4.js"></script>
-    <script language="javascript" type="text/javascript" src="jquery.flot.js"></script>
+    <p id = 'msg'></p>
+    <script language="javascript" type="text/javascript" src="../../static/js/jquery-2.1.4.js"></script>
+    <script language="javascript" type="text/javascript" src="../../static/js/jquery.flot.js"></script>
     <script type="text/javascript">
         $(document).ready(function(){
+            var jsondata = {{jsondata|safe}};
+            // {"data": [["awkward", "awkward_mmr", 0], ["apartment", "apartment", 1], ["aftermath", "aftermath_mmr", 0]]};
+            console.log("loggin jsondata:");
+            console.log(jsondata);
 
-            var jsondata = {{jsondata}}
-            //{"data": [["awkward", "awkward_mmr", 0], ["apartment", "apartment", 1], ["aftermath", "aftermath_mmr", 0]]};
             var length = jsondata['data'].length;
             var ticks_x = [];
             $(jsondata['data']).each(function(index){
@@ -24,12 +26,13 @@
             console.log(ticks_x);
             var ticks_y = [
             [0,""],
-            [1,'WRONG'],
-            [2,'RIGHT']
-            ]
+            [-1,'WRONG'],
+            [1,'RIGHT']
+            ];
+            var zol = [-1, 1]
             var datapts = []
             for (var i = 0; i<length; i++){
-                datapts.push([(i+1), jsondata['data'][i][2]+1])
+                datapts.push([(i+1), zol[jsondata['data'][i][2]]])
             }
             console.log(datapts)
 

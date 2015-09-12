@@ -123,6 +123,7 @@ $(document).ready(function(){
 
 $('#test_publish').click(function(){
     $.get('/words/test_publish',{facility:FACILITY});
+    $('#redirection_url').show();
 });
 
 // to create/join group
@@ -190,7 +191,14 @@ $('#new_group_form').submit(function(event){
        $.post(GANSWER_POST, {facility:FACILITY},function (data){
         playWord(data['next']);
     });
-   }else{
+   }
+   else if(msg == '#end'){
+    // redirect to results!
+    // would be better to show the redirectionUrl instead of redirecting
+    //alert("Competition ended! Click on results");
+    $('#redirection_url').show();
+   }
+   else{
 
        listMessage(msg);
    }
@@ -221,8 +229,10 @@ $('#my_form').submit(function(event){
     $.post(GANSWER_POST,{input_word:getUserInput(), facility:FACILITY}, function (data){
         if(data['done']){
                 //redirect here!
+                // nope, the redirection will be taken care by #end message
+                // so just hide the game elements and wait for #end to come
                 var redirectionUrl = data['next'];
-                $('#redirection_url').attr('href', redirectionUrl).show();
+                $('#redirection_url').attr('href', redirectionUrl);
                 $('#game_elements').hide();
             }
             else{
