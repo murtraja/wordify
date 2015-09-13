@@ -201,10 +201,10 @@ def result_single(request):
 
 @login_required
 def result_group(request):
-    # groupname = request.session.get('groupname',False)
-    # if not groupname:
-    #     return HttpResponse('error! groupname not found')
-    groupname = 'groupname3'
+    groupname = request.session.get('groupname',False)
+    if not groupname:
+        return HttpResponse('error! groupname not found')
+    #groupname = 'groupname3'
     gfr_objs = GroupFinalResult.objects.filter(groupname = groupname)
     # get all the entries having the grouname, probably need to sort it too, if there are multiple
     # entries with same group names!

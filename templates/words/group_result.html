@@ -7,8 +7,13 @@
 
 <body>
 
-	<div id="placeholder" style="width:600px;height:300px"></div>
+	<div id="placeholder_group" style="width:600px;height:300px"></div>	
 	<p id = 'msg'></p>
+	<div id="placeholder_single" style="width:600px;height:300px"></div>
+	<p id = 'msg_single'></p>
+	
+
+
 	<script language="javascript" type="text/javascript" src="../../static/js/jquery-2.1.4.js"></script>
 	<script language="javascript" type="text/javascript" src="../../static/js/jquery.flot.js"></script>
 	<script type="text/javascript">
@@ -49,8 +54,107 @@
                 bars:{show:true, align:"center", barWidth : 1},
 
             };
-            $.plot($('#placeholder'), [totmarks_list], options);
+            $.plot($('#placeholder_group'), [totmarks_list], options);
 
+            $("<div id='tooltip_group'></div>").css({
+            	position: "absolute",
+            	display: "none",
+            	border: "1px solid #fdd",
+            	padding: "2px",
+            	"background-color": "#fee",
+            	opacity: 0.80
+            }).appendTo("body");
+
+            $("#placeholder_group").bind("plothover", function (event, pos, item) {
+
+            	if (item) {
+            		var x = item.datapoint[0];
+            		$("#tooltip_group").html("Show details for user: '"+data[x-1]['user']+"'")
+            		.css({top: item.pageY+5, left: item.pageX+5})
+            		.fadeIn(200);
+            	} else {
+            		$("#tooltip_group").hide();
+            	}
+            });
+
+            $("#placeholder_group").bind("plotclick", function(event, pos, item){
+            	console.log("event:");
+            	console.log(event);
+            	console.log(pos);
+            	console.log(item);
+            	if(item){
+            		var x = item.datapoint[0];
+            		$('#msg').html('Now showing details for user: \''+data[x-1]['user']+"'");
+            		setupSingleStats(x-1);
+            	}
+            });
+            function setupSingleStats(index_of_user){
+            	var ans_list = data[index_of_user]['ans'];
+            	var length = ans_list.length;
+            	console.log("length:"+length);
+            	var ticks_x = [];
+            	$(ans_list).each(function(index){
+            		ticks_x.push([(index+1), $(this)[0]]);
+            	});
+            	console.log(ticks_x);
+            	var ticks_y = [
+            	[0,""],
+            	[-1,'WRONG'],
+            	[1,'RIGHT']
+            	];
+            	var zol = [-1, 1]
+            	var datapts = []
+            	for (var i = 0; i<length; i++){
+            		datapts.push([(i+1), zol[ans_list[i][2]]])
+            	}
+            	console.log(datapts)
+
+            	var d1 = {
+            		data: datapts,
+            	}
+
+            	var options = {
+            		xaxis:{ticks:ticks_x}, 
+            		max:5,
+            		yaxis:{ticks:ticks_y},
+            		grid:{hoverable:true, clickable:true},
+            		bars:{show:true, align:"center", barWidth : 1},
+
+            	};
+            	$.plot($('#placeholder_single'), [d1], options);
+
+            	$("<div id='tooltip_single'></div>").css({
+            		position: "absolute",
+            		display: "none",
+            		border: "1px solid #fdd",
+            		padding: "2px",
+            		"background-color": "#fee",
+            		opacity: 0.80
+            	}).appendTo("body");
+            	$("#placeholder_single").bind("plothover", function (event, pos, item) {
+
+            		if (item) {
+            			var x = item.datapoint[0];
+            			$("#tooltip_single").html("Your answer: '"+ans_list[x-1][1]+"'")
+            			.css({top: item.pageY+5, left: item.pageX+5})
+            			.fadeIn(200);
+            		} else {
+            			$("#tooltip_single").hide();
+            		}
+            	});
+
+            	$("#placeholder_single").bind("plotclick", function(event, pos, item){
+            		console.log("event:");
+            		console.log(event);
+            		console.log(pos);
+            		console.log(item);
+            		if(item){
+            			var x = item.datapoint[0];
+            			$('#msg_single').html('You clicked on Q.No.: '+(x)+', Correct: '+ans_list[x-1][0]+
+            				', you answered: '+ans_list[x-1][1]);
+            		}
+            	});
+            }
 
         });
 </script>
